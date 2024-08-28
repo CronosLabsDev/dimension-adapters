@@ -7,7 +7,6 @@ import { httpGet } from "../utils/fetchURL";
 const retry = require("async-retry")
 
 const blacklistedChains: string[] = [
-  "tron",
   "juno",
   "cardano",
   "litecoin",
@@ -27,6 +26,7 @@ const blacklistedChains: string[] = [
   "thorchain",
   "flow",
   "aptos",
+  "polkadex",
   "neo",
   "phantasma",
   "starknet",
@@ -42,7 +42,6 @@ const blacklistedChains: string[] = [
   "icp",
   "hydradx",
   "osmosis",
-  "sei",
   "ergo",
   "radixdlt",
   "near",
@@ -50,9 +49,11 @@ const blacklistedChains: string[] = [
   "sui",
   "neutron",
   "terra2",
+  "dymension"
 ];
 
 async function getBlock(timestamp: number, chain: Chain, chainBlocks = {} as ChainBlocks) {
+    if (chain === CHAIN.DOGECHAIN) throw new Error("DOGECHAIN not supported")
     if (blacklistedChains.includes(chain)) {
         return null
     }
@@ -66,7 +67,12 @@ async function getBlock(timestamp: number, chain: Chain, chainBlocks = {} as Cha
         if (chain === CHAIN.WAVES)
             timestamp = Math.floor(timestamp * 1000)
         block = await sdk.blocks.getBlockNumber(chain, timestamp)
-    } catch (e) { console.log('error fetching block', e) }
+    } catch (e) {
+        console.log('error fetching block', e)
+        if (chain === CHAIN.SEI) {
+            return null
+        }
+    }
 
     if (block) {
         chainBlocks[chain] = block
@@ -76,15 +82,11 @@ async function getBlock(timestamp: number, chain: Chain, chainBlocks = {} as Cha
     if (chain === CHAIN.CELO)
         block = Number((await retry(async () => (await httpGet("https://explorer.celo.org/api?module=block&action=getblocknobytime&timestamp=" + timestamp + "&closest=before").catch((e) => {
             throw new Error(`Error getting block: ${chain} ${timestamp} ${e.message}`)
-        }))?.result?.blockNumber)));
-    else if (chain === CHAIN.KAVA)
-        block = Number((await retry(async () => (await httpGet(`https://explorer.kava.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before`).catch((e) => {
-            throw new Error(`Error getting block: ${chain} ${timestamp} ${e.message}`)
-        }))?.result?.blockNumber)));
+        }))?.result?.blockNumber, { retries: 3 })));
     else if (chain === CHAIN.ONUS)
         block = Number((await retry(async () => (await httpGet(`https://explorer.onuschain.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before`).catch((e) => {
             throw new Error(`Error getting block: ${chain} ${timestamp} ${e.message}`)
-        }))?.result?.blockNumber)));
+        }))?.result?.blockNumber, { retries: 3 })));
     else if (chain as CHAIN === CHAIN.POLYGON_ZKEVM || chain === CHAIN.VISION || chain as CHAIN === CHAIN.ERA)
         return sdk.api.util.lookupBlock(timestamp, { chain }).then((blockData: any) => blockData.block) // TODO after get block support chain  polygon_zkevm then swith to use api https://coins.llama.fi/block
     else if (chain as CHAIN === CHAIN.WAVES)
@@ -94,13 +96,13 @@ async function getBlock(timestamp: number, chain: Chain, chainBlocks = {} as Cha
     else if (chain === CHAIN.BASE)
         block = Number((await retry(async () => (await httpGet(`https://base.blockscout.com/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before`).catch((e) => {
             throw new Error(`Error getting block: ${chain} ${timestamp} ${e.message}`)
-        }))?.result?.blockNumber)));
+        }))?.result?.blockNumber, { retries: 3 })));
     else if (chain === CHAIN.SCROLL)
         block = Number((await retry(async () => (await httpGet(`https://blockscout.scroll.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before`).catch((e) => {
             throw new Error(`Error getting block: ${chain} ${timestamp} ${e.message}`)
-        }))?.result?.blockNumber)));
+        }))?.result?.blockNumber, { retries: 3 })));
     else
-        block = Number((await retry(async () => (await httpGet(`https://coins.llama.fi/block/${chain}/${timestamp}`).catch((e) => {
+        block = Number((await retry(async () => (await httpGet(`https://coins.llama.fi/block/${chain}/${timestamp}`, { timeout: 10000 }).catch((e) => {
             throw new Error(`Error getting block: ${chain} ${timestamp} ${e.message}`)
         }))?.height, { retries: 1 })));
     if (block) chainBlocks[chain] = block

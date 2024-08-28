@@ -1,3 +1,4 @@
+import * as sdk from "@defillama/sdk";
 import customBackfill from "../../helpers/customBackfill";
 import {
   DEFAULT_TOTAL_VOLUME_FACTORY,
@@ -11,10 +12,10 @@ import type { Chain } from "@defillama/sdk/build/general";
 import { getGraphDimensions } from "../../helpers/getUniSubgraph";
 
 const v2Endpoints: ChainEndpoints = {
-  [CHAIN.BASE]: "https://api.thegraph.com/subgraphs/name/harleen-m/baseswap",
+  [CHAIN.BASE]: sdk.graph.modifyEndpoint('BWHCfpXMHFDx3u4E14hEwv4ST7SUyN89FKJ2RjzWKgA9'),
 };
 const v3Endpoints = {
-  [CHAIN.BASE]: "https://api.thegraph.com/subgraphs/name/baseswapfi/v3-base",
+  [CHAIN.BASE]: 'https://api.goldsky.com/api/public/project_cltceeuudv1ij01x7ekxhfl46/subgraphs/v3-base/prod/gn'
 };
 
 // Fetch function to query the subgraphs

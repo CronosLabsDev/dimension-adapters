@@ -1,10 +1,8 @@
-import { IJSON } from "../adapters/types";
 import { httpGet, httpPost } from "../utils/fetchURL";
 import { getEnv } from "./env";
 const plimit = require('p-limit');
 const limit = plimit(1);
 
-const token = {} as IJSON<string>
 const API_KEYS =getEnv('DUNE_API_KEYS')?.split(',') ?? ["L0URsn5vwgyrWbBpQo9yS1E3C1DBJpZh"]
 let API_KEY_INDEX = 0;
 
@@ -29,21 +27,25 @@ const getLatestData = async (queryId: string) => {
     throw e;
   }
 }
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const inquiryStatus = async (queryId: string) => {
+
+async function randomDelay() {
+  const delay = Math.floor(Math.random() * 5) + 2
+  return new Promise((resolve) => setTimeout(resolve, delay * 1000))
+}
+
+const inquiryStatus = async (execution_id: string, queryId:string) => {
   let _status = undefined;
-  if (token[queryId] === undefined) throw new Error("execution is not undefined.")
   do {
     try {
-      _status = (await limit(() => httpGet(`https://api.dune.com/api/v1/execution/${token[queryId]}/status`, {
+      _status = (await limit(() => httpGet(`https://api.dune.com/api/v1/execution/${execution_id}/status`, {
         headers: {
           "x-dune-api-key": API_KEYS[API_KEY_INDEX]
         }
       }))).state
       if (['QUERY_STATE_PENDING', 'QUERY_STATE_EXECUTING'].includes(_status)) {
         console.info(`waiting for query id ${queryId} to complete...`)
-        await delay(5000) // 5s
+        await randomDelay() // 1 - 4s
       }
     } catch (e: any) {
       throw e;
@@ -54,37 +56,35 @@ const inquiryStatus = async (queryId: string) => {
 
 const submitQuery = async (queryId: string, query_parameters = {}) => {
     let query: undefined | any = undefined
-    if (!token[queryId]) {
-      try {
-        query = await limit(() => httpPost(`https://api.dune.com/api/v1/query/${queryId}/execute`, { query_parameters }, {
-          headers: {
-            "x-dune-api-key": API_KEYS[API_KEY_INDEX],
-            'Content-Type': 'application/json'
-          }
-        }))
-        if (query?.execution_id) {
-          token[queryId] = query?.execution_id
-        } else {
-          throw new Error("error query data: " + query)
+    try {
+      query = await limit(() => httpPost(`https://api.dune.com/api/v1/query/${queryId}/execute`, { query_parameters }, {
+        headers: {
+          "x-dune-api-key": API_KEYS[API_KEY_INDEX],
+          'Content-Type': 'application/json'
         }
-      } catch (e: any) {
-        throw e;
+      }))
+      if (query?.execution_id) {
+        return query?.execution_id
+      } else {
+        throw new Error("error query data: " + query)
       }
-  }
+    } catch (e: any) {
+      throw e;
+    }
 }
 
 
-export const queryDune = async (queryId: string, query_parameters = {}) => {
+export const queryDune = async (queryId: string, query_parameters:any = {}) => {
     if (Object.keys(query_parameters).length === 0) {
       const latest_result = await getLatestData(queryId)
       if (latest_result !== undefined) return latest_result
     }
-    await submitQuery(queryId, query_parameters)
-    const _status = await inquiryStatus(queryId)
+    const execution_id = await submitQuery(queryId, query_parameters)
+    const _status = await inquiryStatus(execution_id, queryId)
     if (_status === 'QUERY_STATE_COMPLETED') {
       const API_KEY = API_KEYS[API_KEY_INDEX]
       try {
-        const queryStatus = await limit(() => httpGet(`https://api.dune.com/api/v1/execution/${token[queryId]}/results?limit=5&offset=0`, {
+        const queryStatus = await limit(() => httpGet(`https://api.dune.com/api/v1/execution/${execution_id}/results?limit=5&offset=0`, {
           headers: {
             "x-dune-api-key": API_KEY
           }
@@ -94,4 +94,17 @@ export const queryDune = async (queryId: string, query_parameters = {}) => {
         throw e;
       }
     }
+}
+
+const tableName = {
+  bsc: "bnb",
+  ethereum: "ethereum",
+  base: "base",
+} as any
+
+export const queryDuneSql = (options:any, query:string) => {
+  return queryDune("3996608", {
+    fullQuery: query.replace("CHAIN", tableName[options.chain] ?? options.chain).replace("TIME_RANGE", `block_time >= from_unixtime(${options.startTimestamp})
+  AND block_time <= from_unixtime(${options.endTimestamp})`)
+  })
 }

@@ -13,7 +13,9 @@ const v3Endpoint = {
   [CHAIN.BLAST]:
       "https://api.studio.thegraph.com/query/50473/v3-blast/version/latest",
   [CHAIN.MODE]:
-      "https://graph.dackieswap.xyz/mode/subgraphs/name/v3-mode",
+      "https://api.studio.thegraph.com/query/50473/v3-mode/version/latest",
+  [CHAIN.XLAYER]:
+      "https://api.studio.thegraph.com/query/50473/v3-xlayer/version/latest",
 };
 
 const VOLUME_USD = "volumeUSD";
@@ -42,6 +44,7 @@ const v3StartTimes = {
   [CHAIN.ARBITRUM]: 1707885300,
   [CHAIN.BLAST]: 1709722800,
   [CHAIN.MODE]: 1712371653,
+  [CHAIN.XLAYER]: 1712369493,
 } as IJSON<number>;
 
 const adapter: SimpleAdapter = {
@@ -65,6 +68,10 @@ const adapter: SimpleAdapter = {
     [CHAIN.MODE]: {
       fetch: v3Graph(CHAIN.MODE),
       start: async () => v3StartTimes[CHAIN.MODE]
+    },
+    [CHAIN.XLAYER]: {
+      fetch: v3Graph(CHAIN.XLAYER),
+      start: async () => v3StartTimes[CHAIN.XLAYER]
     },
   },
   version: 2

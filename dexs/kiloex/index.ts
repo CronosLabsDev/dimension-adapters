@@ -12,7 +12,9 @@ type ChainMap = {
 const historicalVolumeEndpoints: ChainMap = {
   [CHAIN.BSC]: "https://api.kiloex.io/common/queryTradeSummary",
   [CHAIN.OP_BNB]: "https://opapi.kiloex.io/common/queryTradeSummary",
-  [CHAIN.MANTA]: "https://mantaapi.kiloex.io/common/queryTradeSummary"
+  [CHAIN.MANTA]: "https://mantaapi.kiloex.io/common/queryTradeSummary",
+  [CHAIN.TAIKO]: "https://taikoapi.kiloex.io/common/queryTradeSummary",
+  [CHAIN.BSQUARED]: "https://b2api.kiloex.io/common/queryTradeSummary",
 };
 
 interface IVolume {
@@ -51,6 +53,12 @@ const adapter: SimpleAdapter = {
     },
     [CHAIN.MANTA]: {
       fetch: fetch(CHAIN.MANTA), start: 1698796800
+    },
+    [CHAIN.TAIKO]: {
+      fetch: fetch(CHAIN.TAIKO), start: async () => 1717027200
+    },
+    [CHAIN.BSQUARED]: {
+      fetch: fetch(CHAIN.BSQUARED), start: async () => 1722297600
     },
   },
 };

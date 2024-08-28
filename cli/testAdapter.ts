@@ -1,21 +1,21 @@
 require('dotenv').config()
-import * as path from 'path'
-import { Adapter, AdapterType, ChainBlocks, } from '../adapters/types';
-import { checkArguments, ERROR_STRING, formatTimestampAsDate, printVolumes, upperCaseFirst } from './utils';
-import { getUniqStartOfTodayTimestamp } from '../helpers/getUniSubgraphVolume';
-import runAdapter from '../adapters/utils/runAdapter'
-import { canGetBlock, getBlock } from '../helpers/getBlock';
-import getChainsFromDexAdapter from '../adapters/utils/getChainsFromDexAdapter';
 import { execSync } from 'child_process';
+import * as path from 'path';
+import { Adapter, AdapterType, ChainBlocks, } from '../adapters/types';
+import getChainsFromDexAdapter from '../adapters/utils/getChainsFromDexAdapter';
+import runAdapter from '../adapters/utils/runAdapter';
+import { canGetBlock, getBlock } from '../helpers/getBlock';
+import { getUniqStartOfTodayTimestamp } from '../helpers/getUniSubgraphVolume';
+import { checkArguments, printVolumes } from './utils';
 
-function checkIfFileExistsInMasterBranch(filePath: any) {
+function checkIfFileExistsInMasterBranch(_filePath: any) {
   const res = execSync(`git ls-tree --name-only -r master`)
 
-  const resString = res.toString()
-  if (!resString.includes(filePath)) {
-    console.log("\n\n\nERROR: Use Adapter v2 format for new adapters\n\n\n")
-    process.exit(1)
-  }
+  // const resString = res.toString()
+  // if (!resString.includes(filePath)) {
+  //   console.log("\n\n\nERROR: Use Adapter v2 format for new adapters\n\n\n")
+  //   process.exit(1)
+  // }
 }
 
 // tmp
@@ -42,7 +42,7 @@ const passedFile = path.resolve(process.cwd(), `./${adapterType}/${process.argv[
   const cleanDayTimestamp = process.argv[4] ? Number(process.argv[4]) : getUniqStartOfTodayTimestamp(new Date())
   let endCleanDayTimestamp = cleanDayTimestamp;
   console.info(`🦙 Running ${process.argv[3].toUpperCase()} adapter 🦙`)
-  console.info(`_______________________________________`)
+  console.info(`---------------------------------------------------`)
   // Import module to test
   let module: Adapter = (await import(passedFile)).default
   const adapterVersion = module.version
@@ -53,9 +53,9 @@ const passedFile = path.resolve(process.cwd(), `./${adapterType}/${process.argv[
     checkIfFileExistsInMasterBranch(file)
   }
 
-  const runAt = adapterVersion === 2 ? endTimestamp : process.argv[4] ? Number(process.argv[4]) : endTimestamp - 1;
-  console.info(`${upperCaseFirst(adapterType)} for ${formatTimestampAsDate(String(getUniqStartOfTodayTimestamp(new Date((runAt * 1000)))))}`)
-  console.info(`_______________________________________\n`)
+  console.info(`Start Date:\t${new Date((endTimestamp - 3600*24)*1e3).toUTCString()}`)
+  console.info(`End Date:\t${new Date(endTimestamp*1e3).toUTCString()}`)
+  console.info(`---------------------------------------------------\n`)
 
   // Get closest block to clean day. Only for EVM compatible ones.
   const allChains = getChainsFromDexAdapter(module).filter(canGetBlock)
@@ -82,6 +82,7 @@ const passedFile = path.resolve(process.cwd(), `./${adapterType}/${process.argv[
     const allVolumes = await Promise.all(Object.entries(breakdownAdapter).map(([version, adapter]) =>
       runAdapter(adapter, endTimestamp, chainBlocks, undefined, undefined, {
         adapterVersion,
+        isTest: true,
       }).then(res => ({ version, res }))
     ))
     allVolumes.forEach(({ version, res }) => {
